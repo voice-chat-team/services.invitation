@@ -8,4 +8,5 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/Invitation.js'
 export type * from './commonInputTypes.js'

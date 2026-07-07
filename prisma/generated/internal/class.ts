@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.8.0",
   "engineVersion": "3c6e192761c0362d496ed980de936e2f3cebcd3a",
   "activeProvider": "postgresql",
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Get a free hosted Postgres database in seconds: `npx create-db`\n\ngenerator client {\n  provider     = \"prisma-client\"\n  output       = \"./generated\"\n  moduleFormat = \"cjs\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Get a free hosted Postgres database in seconds: `npx create-db`\n\ngenerator client {\n  provider     = \"prisma-client\"\n  output       = \"./generated\"\n  moduleFormat = \"cjs\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel Invitation {\n  id String @id @default(uuid())\n\n  senderId    String           @map(\"sender_id\")\n  receiverId  String           @map(\"receiver_id\")\n  guildId     String           @map(\"guild_id\")\n  status      InvitationStatus @default(PENDING)\n  invitedRole Int              @map(\"invited_role\")\n\n  expiresAt DateTime @map(\"expires_at\")\n  createdAt DateTime @default(now()) @map(\"created_at\")\n  updatedAt DateTime @updatedAt @map(\"updated_at\")\n\n  @@map(\"invitations\")\n}\n\nenum InvitationStatus {\n  PENDING\n  ACCEPTED\n  DECLINED\n  EXPIRED\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -32,10 +32,10 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"Invitation\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"senderId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"sender_id\"},{\"name\":\"receiverId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"receiver_id\"},{\"name\":\"guildId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"guild_id\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"InvitationStatus\"},{\"name\":\"invitedRole\",\"kind\":\"scalar\",\"type\":\"Int\",\"dbName\":\"invited_role\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"expires_at\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"}],\"dbName\":\"invitations\"}},\"enums\":{},\"types\":{}}")
 config.parameterizationSchema = {
-  strings: JSON.parse("[]"),
-  graph: "AAAA"
+  strings: JSON.parse("[\"where\",\"Invitation.findUnique\",\"Invitation.findUniqueOrThrow\",\"orderBy\",\"cursor\",\"Invitation.findFirst\",\"Invitation.findFirstOrThrow\",\"Invitation.findMany\",\"data\",\"Invitation.createOne\",\"Invitation.createMany\",\"Invitation.createManyAndReturn\",\"Invitation.updateOne\",\"Invitation.updateMany\",\"Invitation.updateManyAndReturn\",\"create\",\"update\",\"Invitation.upsertOne\",\"Invitation.deleteOne\",\"Invitation.deleteMany\",\"having\",\"_count\",\"_avg\",\"_sum\",\"_min\",\"_max\",\"Invitation.groupBy\",\"Invitation.aggregate\",\"AND\",\"OR\",\"NOT\",\"id\",\"senderId\",\"receiverId\",\"guildId\",\"InvitationStatus\",\"status\",\"invitedRole\",\"expiresAt\",\"createdAt\",\"updatedAt\",\"equals\",\"in\",\"notIn\",\"lt\",\"lte\",\"gt\",\"gte\",\"not\",\"contains\",\"startsWith\",\"endsWith\",\"set\",\"increment\",\"decrement\",\"multiply\",\"divide\"]"),
+  graph: "NQsQDBwAACgAMB0AAAQAEB4AACgAMB8BAAAAASABACkAISEBACkAISIBACkAISQAACokIiUCACsAISZAACwAISdAACwAIShAACwAIQEAAAABACABAAAAAQAgDBwAACgAMB0AAAQAEB4AACgAMB8BACkAISABACkAISEBACkAISIBACkAISQAACokIiUCACsAISZAACwAISdAACwAIShAACwAIQADAAAABAAgAwAABQAwBAAAAQAgAwAAAAQAIAMAAAUAMAQAAAEAIAMAAAAEACADAAAFADAEAAABACAJHwEAAAABIAEAAAABIQEAAAABIgEAAAABJAAAACQCJQIAAAABJkAAAAABJ0AAAAABKEAAAAABAQgAAAkAIAkfAQAAAAEgAQAAAAEhAQAAAAEiAQAAAAEkAAAAJAIlAgAAAAEmQAAAAAEnQAAAAAEoQAAAAAEBCAAACwAwAQgAAAsAMAkfAQAyACEgAQAyACEhAQAyACEiAQAyACEkAAAzJCIlAgA0ACEmQAA1ACEnQAA1ACEoQAA1ACECAAAAAQAgCAAADgAgCR8BADIAISABADIAISEBADIAISIBADIAISQAADMkIiUCADQAISZAADUAISdAADUAIShAADUAIQIAAAAEACAIAAAQACACAAAABAAgCAAAEAAgAwAAAAEAIA8AAAkAIBAAAA4AIAEAAAABACABAAAABAAgBRUAAC0AIBYAAC4AIBcAADEAIBgAADAAIBkAAC8AIAwcAAAaADAdAAAXABAeAAAaADAfAQAbACEgAQAbACEhAQAbACEiAQAbACEkAAAcJCIlAgAdACEmQAAeACEnQAAeACEoQAAeACEDAAAABAAgAwAAFgAwFAAAFwAgAwAAAAQAIAMAAAUAMAQAAAEAIAwcAAAaADAdAAAXABAeAAAaADAfAQAbACEgAQAbACEhAQAbACEiAQAbACEkAAAcJCIlAgAdACEmQAAeACEnQAAeACEoQAAeACEOFQAAIAAgGAAAJwAgGQAAJwAgKQEAAAABKgEAAAAEKwEAAAAELAEAAAABLQEAAAABLgEAAAABLwEAAAABMAEAJgAhMQEAAAABMgEAAAABMwEAAAABBxUAACAAIBgAACUAIBkAACUAICkAAAAkAioAAAAkCCsAAAAkCDAAACQkIg0VAAAgACAWAAAjACAXAAAgACAYAAAgACAZAAAgACApAgAAAAEqAgAAAAQrAgAAAAQsAgAAAAEtAgAAAAEuAgAAAAEvAgAAAAEwAgAiACELFQAAIAAgGAAAIQAgGQAAIQAgKUAAAAABKkAAAAAEK0AAAAAELEAAAAABLUAAAAABLkAAAAABL0AAAAABMEAAHwAhCxUAACAAIBgAACEAIBkAACEAIClAAAAAASpAAAAABCtAAAAABCxAAAAAAS1AAAAAAS5AAAAAAS9AAAAAATBAAB8AIQgpAgAAAAEqAgAAAAQrAgAAAAQsAgAAAAEtAgAAAAEuAgAAAAEvAgAAAAEwAgAgACEIKUAAAAABKkAAAAAEK0AAAAAELEAAAAABLUAAAAABLkAAAAABL0AAAAABMEAAIQAhDRUAACAAIBYAACMAIBcAACAAIBgAACAAIBkAACAAICkCAAAAASoCAAAABCsCAAAABCwCAAAAAS0CAAAAAS4CAAAAAS8CAAAAATACACIAIQgpCAAAAAEqCAAAAAQrCAAAAAQsCAAAAAEtCAAAAAEuCAAAAAEvCAAAAAEwCAAjACEHFQAAIAAgGAAAJQAgGQAAJQAgKQAAACQCKgAAACQIKwAAACQIMAAAJCQiBCkAAAAkAioAAAAkCCsAAAAkCDAAACUkIg4VAAAgACAYAAAnACAZAAAnACApAQAAAAEqAQAAAAQrAQAAAAQsAQAAAAEtAQAAAAEuAQAAAAEvAQAAAAEwAQAmACExAQAAAAEyAQAAAAEzAQAAAAELKQEAAAABKgEAAAAEKwEAAAAELAEAAAABLQEAAAABLgEAAAABLwEAAAABMAEAJwAhMQEAAAABMgEAAAABMwEAAAABDBwAACgAMB0AAAQAEB4AACgAMB8BACkAISABACkAISEBACkAISIBACkAISQAACokIiUCACsAISZAACwAISdAACwAIShAACwAIQspAQAAAAEqAQAAAAQrAQAAAAQsAQAAAAEtAQAAAAEuAQAAAAEvAQAAAAEwAQAnACExAQAAAAEyAQAAAAEzAQAAAAEEKQAAACQCKgAAACQIKwAAACQIMAAAJSQiCCkCAAAAASoCAAAABCsCAAAABCwCAAAAAS0CAAAAAS4CAAAAAS8CAAAAATACACAAIQgpQAAAAAEqQAAAAAQrQAAAAAQsQAAAAAEtQAAAAAEuQAAAAAEvQAAAAAEwQAAhACEAAAAAAAE0AQAAAAEBNAAAACQCBTQCAAAAATUCAAAAATYCAAAAATcCAAAAATgCAAAAAQE0QAAAAAEAAAAABRUABhYABxcACBgACRkACgAAAAAABRUABhYABxcACBgACRkACgECAQIDAQUGAQYHAQcIAQkKAQoMAgsNAwwPAQ0RAg4SBBETARIUARMVAhoYBRsZCw"
 }
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
@@ -70,8 +70,8 @@ export interface PrismaClientConstructor {
    * const prisma = new PrismaClient({
    *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
    * })
-   * // Fetch zero or more Users
-   * const users = await prisma.user.findMany()
+   * // Fetch zero or more Invitations
+   * const invitations = await prisma.invitation.findMany()
    * ```
    * 
    * Read more in our [docs](https://pris.ly/d/client).
@@ -94,8 +94,8 @@ export interface PrismaClientConstructor {
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more Users
- * const users = await prisma.user.findMany()
+ * // Fetch zero or more Invitations
+ * const invitations = await prisma.invitation.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -188,7 +188,15 @@ export interface PrismaClient<
     extArgs: ExtArgs
   }>>
 
-    
+      /**
+   * `prisma.invitation`: Exposes CRUD operations for the **Invitation** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Invitations
+    * const invitations = await prisma.invitation.findMany()
+    * ```
+    */
+  get invitation(): Prisma.InvitationDelegate<ExtArgs, { omit: OmitOpts }>;
 }
 
 export function getPrismaClientClass(): PrismaClientConstructor {

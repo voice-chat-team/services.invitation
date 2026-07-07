@@ -3,8 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: voice-chat-invitation-service
-    env_file: .env.production.local
+    image: tankistpro512/voice-chat-invitation-service:latest
     networks:
       - voice-chat-network
     restart: unless-stopped

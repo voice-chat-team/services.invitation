@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { InvitationModule } from './modules/invitation/invitation.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
+import { UserModule } from './modules/user/user.module';
+import { GuildModule } from './modules/guild/guild.module';
 
 @Module({
   imports: [
@@ -11,6 +13,8 @@ import { ConfigModule } from '@nestjs/config';
     }),
     PrismaModule,
     InvitationModule,
+    UserModule,
+    GuildModule,
   ],
   controllers: [],
   providers: [],

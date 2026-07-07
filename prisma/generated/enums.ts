@@ -9,7 +9,11 @@
 * 🟢 You can import this file directly.
 */
 
+export const InvitationStatus = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  DECLINED: 'DECLINED',
+  EXPIRED: 'EXPIRED'
+} as const
 
-
-// This file is empty because there are no enums in the schema.
-export {}
+export type InvitationStatus = (typeof InvitationStatus)[keyof typeof InvitationStatus]
