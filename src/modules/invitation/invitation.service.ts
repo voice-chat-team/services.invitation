@@ -41,14 +41,11 @@ export class InvitationService {
         });
       }
     } catch (error) {
+      console.error(error);
       if ('error' in error) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         throw new RpcException(error.error);
       }
-      throw new RpcException({
-        code: RpcStatus.INTERNAL,
-        details: 'Ошибка получателя',
-      });
     }
 
     const senderMember = await this.guildClient.call('getMemberById', {
@@ -91,7 +88,8 @@ export class InvitationService {
         expiresAt: invitation.expiresAt.toISOString(),
         createdAt: invitation.createdAt.toISOString(),
       };
-    } catch {
+    } catch (error) {
+      console.error(error);
       throw new RpcException({
         code: RpcStatus.INVALID_ARGUMENT,
         details: 'Не удалось отправить приглашение',
