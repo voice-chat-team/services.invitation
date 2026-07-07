@@ -1,0 +1,14 @@
+services:
+  invitation-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: voice-chat-invitation-service
+    env_file: .env.production.local
+    networks:
+      - voice-chat-network
+    restart: unless-stopped
+
+networks:
+  voice-chat-network:
+    external: true
