@@ -73,7 +73,7 @@ export class InvitationService {
         },
       });
 
-      await this.centrifugoService.publish(`user#${request.receiverId}`, {
+      await this.centrifugoService.publish(`personal:#${request.receiverId}`, {
         type: 'INVITATION_CREATED',
         payload: invitation,
       });
