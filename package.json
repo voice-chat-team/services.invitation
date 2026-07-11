@@ -30,8 +30,8 @@
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
-    "@voice-chat/common": "^1.0.14",
-    "@voice-chat/contracts": "^1.0.31",
+    "@voice-chat/common": "^1.0.15",
+    "@voice-chat/contracts": "^1.0.32",
     "axios": "^1.18.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"

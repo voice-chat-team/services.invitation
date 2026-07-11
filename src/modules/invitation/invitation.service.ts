@@ -10,10 +10,12 @@ import { RpcException } from '@nestjs/microservices';
 import { RpcStatus } from '@voice-chat/common';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { CentrifugoService } from 'src/infrastructure/centrifugo/centrifugo.service';
+import { UserClientGrpc } from '../user/user.grpc';
 
 @Injectable()
 export class InvitationService {
   constructor(
+    private readonly userClient: UserClientGrpc,
     private readonly guildClient: GuildClientGrpc,
     private readonly prisma: PrismaService,
     private readonly centrifugoService: CentrifugoService,
@@ -29,10 +31,26 @@ export class InvitationService {
       });
     }
 
+    const reciverUserInfo = await this.userClient.call('getUser', {
+      userId: request.receiverId,
+      username: request.receiverUsername,
+    });
+
+    const senderUserInfo = await this.userClient.call('getUser', {
+      userId: request.senderId,
+    });
+
+    if (!reciverUserInfo.user) {
+      throw new RpcException({
+        code: RpcStatus.NOT_FOUND,
+        details: 'Пользователь не найден',
+      });
+    }
+
     try {
       const receiverMember = await this.guildClient.call('getMemberById', {
-        userId: request.receiverId,
         guildId: request.guildId,
+        userId: reciverUserInfo.user?.id,
       });
       if (receiverMember.memberInfo) {
         throw new RpcException({
@@ -64,7 +82,7 @@ export class InvitationService {
       const invitation = await this.prisma.invitation.create({
         data: {
           ...request,
-          receiverId: request.receiverId,
+          receiverId: reciverUserInfo.user?.id,
           senderId: request.senderId,
           guildId: request.guildId,
           status: InvitationStatus.PENDING,
@@ -87,6 +105,8 @@ export class InvitationService {
         invitedRole: invitation.invitedRole,
         expiresAt: invitation.expiresAt.toISOString(),
         createdAt: invitation.createdAt.toISOString(),
+        receiverInfo: reciverUserInfo.user,
+        senderInfo: senderUserInfo.user,
       };
     } catch (error) {
       console.error(error);
