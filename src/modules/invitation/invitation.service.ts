@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import {
-  type CreateInvitationRequest,
-  type Invitation,
+import type {
+  AcceptInvitationRequest,
+  GetInvitationsRequest,
+  CreateInvitationRequest,
+  Invitation,
 } from '@voice-chat/contracts/gen/invitation';
 import { GRPC_INVITATION_STATUS } from '../../shared/mapper/invitation-status.map';
 import { InvitationStatus } from 'prisma/generated/enums';
@@ -11,6 +13,7 @@ import { RpcStatus } from '@voice-chat/common';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { CentrifugoService } from 'src/infrastructure/centrifugo/centrifugo.service';
 import { UserClientGrpc } from '../user/user.grpc';
+import { InvitationModel } from 'prisma/generated/models';
 
 @Injectable()
 export class InvitationService {
@@ -34,10 +37,6 @@ export class InvitationService {
     const reciverUserInfo = await this.userClient.call('getUser', {
       userId: request.receiverId,
       username: request.receiverUsername,
-    });
-
-    const senderUserInfo = await this.userClient.call('getUser', {
-      userId: request.senderId,
     });
 
     if (!reciverUserInfo.user) {
@@ -91,23 +90,16 @@ export class InvitationService {
         },
       });
 
+      const invitationResponse = (
+        await this._mapInvitationsToResponse([invitation])
+      )[0];
+
       await this.centrifugoService.publish(`personal:#${request.receiverId}`, {
-        type: 'INVITATION_CREATED',
-        payload: invitation,
+        type: 'NEW_INVITATION',
+        payload: invitationResponse,
       });
 
-      return {
-        id: invitation.id,
-        guildId: invitation.guildId,
-        senderId: invitation.senderId,
-        receiverId: invitation.receiverId,
-        status: GRPC_INVITATION_STATUS.PENDING,
-        invitedRole: invitation.invitedRole,
-        expiresAt: invitation.expiresAt.toISOString(),
-        createdAt: invitation.createdAt.toISOString(),
-        receiverInfo: reciverUserInfo.user,
-        senderInfo: senderUserInfo.user,
-      };
+      return invitationResponse;
     } catch (error) {
       console.error(error);
       throw new RpcException({
@@ -115,5 +107,88 @@ export class InvitationService {
         details: 'Не удалось отправить приглашение',
       });
     }
+  }
+
+  async getUserInvitations(
+    request: GetInvitationsRequest,
+  ): Promise<Invitation[]> {
+    const { guildId, receiverId, senderId } = request;
+
+    const invitations = await this.prisma.invitation.findMany({
+      where: {
+        guildId,
+        receiverId,
+        senderId,
+      },
+    });
+
+    return this._mapInvitationsToResponse(invitations);
+  }
+
+  async updateInvitation(
+    request: AcceptInvitationRequest,
+    newStatus: InvitationStatus,
+  ) {
+    const invitation = await this.prisma.invitation.findUnique({
+      where: {
+        id: request.invitationId,
+        receiverId: request.userId,
+      },
+    });
+
+    if (!invitation) {
+      throw new RpcException({
+        code: RpcStatus.NOT_FOUND,
+        details: 'Приглашение не найдено',
+      });
+    }
+
+    try {
+      await this.prisma.invitation.update({
+        where: {
+          id: invitation.id,
+        },
+        data: {
+          status: newStatus,
+        },
+      });
+
+      await this.centrifugoService.publish(`guild:${invitation.guildId}`, {
+        type: 'UPDATE_INVITATION',
+        payload: (await this._mapInvitationsToResponse([invitation]))[0],
+      });
+    } catch (error) {
+      console.log(error);
+
+      throw new RpcException({
+        code: RpcStatus.INTERNAL,
+        details: 'Ошибка при обновлении статуса приглашения',
+      });
+    }
+  }
+
+  private async _mapInvitationsToResponse(
+    invitations: InvitationModel[],
+  ): Promise<Invitation[]> {
+    const receiverUsersIds = invitations.map(
+      (invitation) => invitation.receiverId,
+    );
+    const senderUsersIds = invitations.map((invitation) => invitation.senderId);
+    const usersInfo = await this.userClient.call('getRangeUsersById', {
+      usersId: [...receiverUsersIds, ...senderUsersIds],
+    });
+
+    return invitations.map((invitation) => ({
+      ...invitation,
+      status: GRPC_INVITATION_STATUS[invitation.status],
+      expiresAt: invitation.expiresAt.toISOString(),
+      createdAt: invitation.createdAt.toISOString(),
+      receiverInfo: usersInfo.users.find(
+        (user) => user.id === invitation.receiverId,
+      ),
+      senderInfo: usersInfo.users.find(
+        (user) => user.id === invitation.senderId,
+      ),
+    }));
   }
 }
