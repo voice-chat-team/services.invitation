@@ -191,7 +191,11 @@ export class InvitationService {
     });
 
     return invitations.map((invitation) => ({
-      ...invitation,
+      id: invitation.id,
+      guildId: invitation.guildId,
+      senderId: invitation.senderId,
+      receiverId: invitation.receiverId,
+      invitedRole: invitation.invitedRole,
       status: GRPC_INVITATION_STATUS[invitation.status],
       expiresAt: invitation.expiresAt.toISOString(),
       createdAt: invitation.createdAt.toISOString(),
