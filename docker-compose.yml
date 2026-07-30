@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: tankistpro512/voice-chat-invitation-service:latest
+    image: ghcr.io/voice-chat-team/voice-chat-invitation-service:latest
     networks:
       - voice-chat-network
     restart: unless-stopped

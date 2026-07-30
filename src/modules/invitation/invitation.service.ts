@@ -11,17 +11,17 @@ import { GuildClientGrpc } from '../guild/guild.grpc';
 import { RpcException } from '@nestjs/microservices';
 import { RpcStatus } from '@voice-chat/common';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
-import { CentrifugoService } from 'src/infrastructure/centrifugo/centrifugo.service';
 import { UserClientGrpc } from '../user/user.grpc';
 import { InvitationModel } from 'prisma/generated/models';
+import { NotificationClientGrpc } from '../notification/notification.grpc';
 
 @Injectable()
 export class InvitationService {
   constructor(
     private readonly userClient: UserClientGrpc,
     private readonly guildClient: GuildClientGrpc,
+    private readonly notificationClient: NotificationClientGrpc,
     private readonly prisma: PrismaService,
-    private readonly centrifugoService: CentrifugoService,
   ) {}
 
   async createInvitation(
@@ -94,9 +94,15 @@ export class InvitationService {
         await this._mapInvitationsToResponse([invitation])
       )[0];
 
-      await this.centrifugoService.publish(`personal:#${request.receiverId}`, {
-        type: 'NEW_INVITATION',
-        payload: invitationResponse,
+      await this.notificationClient.call('sendNotification', {
+        channel: `personal:#${request.receiverId}`,
+        receiverId: request.receiverId!,
+        senderId: request.senderId,
+        notificationPayload: {
+          type: 'NEW_INVITATION',
+          message: `Пользователь ${invitationResponse.senderInfo?.username} приглашает вас вступить на сервер - ${invitationResponse.guildId}`,
+          payload: invitationResponse,
+        },
       });
 
       return invitationResponse;
@@ -153,9 +159,15 @@ export class InvitationService {
         },
       });
 
-      await this.centrifugoService.publish(`guild:${invitation.guildId}`, {
-        type: 'UPDATE_INVITATION',
-        payload: (await this._mapInvitationsToResponse([invitation]))[0],
+      await this.notificationClient.call('sendNotification', {
+        channel: `guild:${invitation.guildId}`,
+        receiverId: invitation.receiverId,
+        senderId: invitation.senderId,
+        notificationPayload: {
+          type: 'UPDATE_INVITATION',
+          message: `Статус уведломления ${invitation.id} поменялся - ${newStatus}`,
+          payload: (await this._mapInvitationsToResponse([invitation]))[0],
+        },
       });
     } catch (error) {
       console.log(error);
