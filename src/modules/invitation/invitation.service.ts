@@ -14,6 +14,7 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { UserClientGrpc } from '../user/user.grpc';
 import { InvitationModel } from 'prisma/generated/models';
 import { NotificationClientGrpc } from '../notification/notification.grpc';
+import { stringify } from 'node:querystring';
 
 @Injectable()
 export class InvitationService {
@@ -98,11 +99,11 @@ export class InvitationService {
         channel: `personal:#${request.receiverId}`,
         receiverId: request.receiverId!,
         senderId: request.senderId,
-        notificationPayload: {
+        notificationPayload: JSON.stringify({
           type: 'NEW_INVITATION',
           message: `Пользователь ${invitationResponse.senderInfo?.username} приглашает вас вступить на сервер - ${invitationResponse.guildId}`,
           payload: invitationResponse,
-        },
+        }),
       });
 
       return invitationResponse;
@@ -163,11 +164,11 @@ export class InvitationService {
         channel: `guild:${invitation.guildId}`,
         receiverId: invitation.receiverId,
         senderId: invitation.senderId,
-        notificationPayload: {
+        notificationPayload: JSON.stringify({
           type: 'UPDATE_INVITATION',
           message: `Статус уведломления ${invitation.id} поменялся - ${newStatus}`,
           payload: (await this._mapInvitationsToResponse([invitation]))[0],
-        },
+        }),
       });
     } catch (error) {
       console.log(error);
