@@ -14,7 +14,6 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { UserClientGrpc } from '../user/user.grpc';
 import { InvitationModel } from 'prisma/generated/models';
 import { NotificationClientGrpc } from '../notification/notification.grpc';
-import { stringify } from 'node:querystring';
 
 @Injectable()
 export class InvitationService {
@@ -96,7 +95,7 @@ export class InvitationService {
       )[0];
 
       await this.notificationClient.call('sendNotification', {
-        channel: `personal:#${request.receiverId}`,
+        channel: `personal:#${request.receiverId}:notifications`,
         receiverId: request.receiverId!,
         senderId: request.senderId,
         notificationPayload: JSON.stringify({
