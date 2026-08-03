@@ -77,6 +77,17 @@ export class InvitationService {
       });
     }
 
+    const { guild } = await this.guildClient.call('getGuildById', {
+      guildId: request.guildId,
+    });
+
+    if (!guild) {
+      throw new RpcException({
+        code: RpcStatus.NOT_FOUND,
+        details: 'Такой сервер не существует',
+      });
+    }
+
     try {
       const invitation = await this.prisma.invitation.create({
         data: {
@@ -100,7 +111,7 @@ export class InvitationService {
         senderId: request.senderId,
         notificationPayload: JSON.stringify({
           type: 'NEW_INVITATION',
-          message: `Пользователь ${invitationResponse.senderInfo?.username} приглашает вас вступить на сервер - ${invitationResponse.guildId}`,
+          message: `Пользователь ${invitationResponse.senderInfo?.username} приглашает вас вступить на сервер - ${guild.name}`,
           payload: invitationResponse,
         }),
       });

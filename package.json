@@ -31,7 +31,7 @@
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@voice-chat/common": "^1.0.17",
-    "@voice-chat/contracts": "^1.0.39",
+    "@voice-chat/contracts": "^1.0.40",
     "axios": "^1.18.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
