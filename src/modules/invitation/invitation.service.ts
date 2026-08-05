@@ -170,6 +170,13 @@ export class InvitationService {
         },
       });
 
+      if (newStatus === InvitationStatus.ACCEPTED) {
+        await this.guildClient.call('joinUserToGuild', {
+          guildId: invitation.guildId,
+          userId: invitation.receiverId,
+        });
+      }
+
       await this.notificationClient.call('sendNotification', {
         channel: `guild:${invitation.guildId}`,
         receiverId: invitation.receiverId,
