@@ -176,17 +176,6 @@ export class InvitationService {
           userId: invitation.receiverId,
         });
       }
-
-      await this.notificationClient.call('sendNotification', {
-        channel: `guild:${invitation.guildId}`,
-        receiverId: invitation.receiverId,
-        senderId: invitation.senderId,
-        notificationPayload: JSON.stringify({
-          type: 'UPDATE_INVITATION',
-          message: `Статус уведломления ${invitation.id} поменялся - ${newStatus}`,
-          payload: (await this._mapInvitationsToResponse([invitation]))[0],
-        }),
-      });
     } catch (error) {
       console.log(error);
 
