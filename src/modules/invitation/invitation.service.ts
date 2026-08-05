@@ -14,6 +14,7 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { UserClientGrpc } from '../user/user.grpc';
 import { InvitationModel } from 'prisma/generated/models';
 import { NotificationClientGrpc } from '../notification/notification.grpc';
+import { NotificationType } from '@voice-chat/contracts';
 
 @Injectable()
 export class InvitationService {
@@ -109,8 +110,8 @@ export class InvitationService {
         channel: `personal:#${request.receiverId}:notifications`,
         receiverId: request.receiverId!,
         senderId: request.senderId,
+        notificationType: NotificationType.NEW_INVITE_TO_GUILD,
         notificationPayload: JSON.stringify({
-          type: 'NEW_INVITATION',
           message: `Пользователь ${invitationResponse.senderInfo?.username} приглашает вас вступить на сервер - ${guild.name}`,
           payload: invitationResponse,
         }),
