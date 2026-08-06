@@ -106,16 +106,23 @@ export class InvitationService {
         await this._mapInvitationsToResponse([invitation])
       )[0];
 
-      await this.notificationClient.call('sendNotification', {
-        channel: `personal:#${request.receiverId}:notifications`,
-        receiverId: request.receiverId!,
-        senderId: request.senderId,
-        notificationType: NotificationType.NEW_INVITE_TO_GUILD,
-        notificationPayload: JSON.stringify({
-          message: `Пользователь ${invitationResponse.senderInfo?.username} приглашает вас вступить на сервер - ${guild.name}`,
-          payload: invitationResponse,
-        }),
-      });
+      try {
+        await this.notificationClient.call('sendNotification', {
+          channel: `personal:#${request.receiverId}:notifications`,
+          receiverId: request.receiverId!,
+          senderId: request.senderId,
+          notificationType: NotificationType.NEW_INVITE_TO_GUILD,
+          notificationPayload: JSON.stringify({
+            message: `Пользователь ${invitationResponse.senderInfo?.username} приглашает вас вступить на сервер - ${guild.name}`,
+            payload: invitationResponse,
+          }),
+        });
+      } catch (notifyError) {
+        await this.prisma.invitation.delete({
+          where: { id: invitation.id },
+        });
+        throw notifyError;
+      }
 
       return invitationResponse;
     } catch (error) {
@@ -172,10 +179,18 @@ export class InvitationService {
       });
 
       if (newStatus === InvitationStatus.ACCEPTED) {
-        await this.guildClient.call('joinUserToGuild', {
-          guildId: invitation.guildId,
-          userId: invitation.receiverId,
-        });
+        try {
+          await this.guildClient.call('joinUserToGuild', {
+            guildId: invitation.guildId,
+            userId: invitation.receiverId,
+          });
+        } catch (joinError) {
+          await this.prisma.invitation.update({
+            where: { id: invitation.id },
+            data: { status: InvitationStatus.PENDING },
+          });
+          throw joinError;
+        }
       }
     } catch (error) {
       console.log(error);
