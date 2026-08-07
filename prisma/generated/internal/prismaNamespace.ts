@@ -521,6 +521,7 @@ export const InvitationScalarFieldEnum = {
   id: 'id',
   senderId: 'senderId',
   receiverId: 'receiverId',
+  notificationId: 'notificationId',
   guildId: 'guildId',
   status: 'status',
   invitedRole: 'invitedRole',
@@ -546,6 +547,14 @@ export const QueryMode = {
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
 

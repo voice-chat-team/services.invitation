@@ -19,6 +19,7 @@ model Invitation {
 
   senderId String @map("sender_id")
   receiverId String @map("receiver_id")
+  notificationId String? @map("notification_id")
   guildId String @map("guild_id")
   status InvitationStatus @default(PENDING)
   invitedRole Int @map("invited_role")

@@ -38,6 +38,7 @@ export type InvitationMinAggregateOutputType = {
   id: string | null
   senderId: string | null
   receiverId: string | null
+  notificationId: string | null
   guildId: string | null
   status: $Enums.InvitationStatus | null
   invitedRole: number | null
@@ -50,6 +51,7 @@ export type InvitationMaxAggregateOutputType = {
   id: string | null
   senderId: string | null
   receiverId: string | null
+  notificationId: string | null
   guildId: string | null
   status: $Enums.InvitationStatus | null
   invitedRole: number | null
@@ -62,6 +64,7 @@ export type InvitationCountAggregateOutputType = {
   id: number
   senderId: number
   receiverId: number
+  notificationId: number
   guildId: number
   status: number
   invitedRole: number
@@ -84,6 +87,7 @@ export type InvitationMinAggregateInputType = {
   id?: true
   senderId?: true
   receiverId?: true
+  notificationId?: true
   guildId?: true
   status?: true
   invitedRole?: true
@@ -96,6 +100,7 @@ export type InvitationMaxAggregateInputType = {
   id?: true
   senderId?: true
   receiverId?: true
+  notificationId?: true
   guildId?: true
   status?: true
   invitedRole?: true
@@ -108,6 +113,7 @@ export type InvitationCountAggregateInputType = {
   id?: true
   senderId?: true
   receiverId?: true
+  notificationId?: true
   guildId?: true
   status?: true
   invitedRole?: true
@@ -207,6 +213,7 @@ export type InvitationGroupByOutputType = {
   id: string
   senderId: string
   receiverId: string
+  notificationId: string | null
   guildId: string
   status: $Enums.InvitationStatus
   invitedRole: number
@@ -242,6 +249,7 @@ export type InvitationWhereInput = {
   id?: Prisma.StringFilter<"Invitation"> | string
   senderId?: Prisma.StringFilter<"Invitation"> | string
   receiverId?: Prisma.StringFilter<"Invitation"> | string
+  notificationId?: Prisma.StringNullableFilter<"Invitation"> | string | null
   guildId?: Prisma.StringFilter<"Invitation"> | string
   status?: Prisma.EnumInvitationStatusFilter<"Invitation"> | $Enums.InvitationStatus
   invitedRole?: Prisma.IntFilter<"Invitation"> | number
@@ -254,6 +262,7 @@ export type InvitationOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   senderId?: Prisma.SortOrder
   receiverId?: Prisma.SortOrder
+  notificationId?: Prisma.SortOrderInput | Prisma.SortOrder
   guildId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   invitedRole?: Prisma.SortOrder
@@ -269,6 +278,7 @@ export type InvitationWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.InvitationWhereInput | Prisma.InvitationWhereInput[]
   senderId?: Prisma.StringFilter<"Invitation"> | string
   receiverId?: Prisma.StringFilter<"Invitation"> | string
+  notificationId?: Prisma.StringNullableFilter<"Invitation"> | string | null
   guildId?: Prisma.StringFilter<"Invitation"> | string
   status?: Prisma.EnumInvitationStatusFilter<"Invitation"> | $Enums.InvitationStatus
   invitedRole?: Prisma.IntFilter<"Invitation"> | number
@@ -281,6 +291,7 @@ export type InvitationOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   senderId?: Prisma.SortOrder
   receiverId?: Prisma.SortOrder
+  notificationId?: Prisma.SortOrderInput | Prisma.SortOrder
   guildId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   invitedRole?: Prisma.SortOrder
@@ -301,6 +312,7 @@ export type InvitationScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Invitation"> | string
   senderId?: Prisma.StringWithAggregatesFilter<"Invitation"> | string
   receiverId?: Prisma.StringWithAggregatesFilter<"Invitation"> | string
+  notificationId?: Prisma.StringNullableWithAggregatesFilter<"Invitation"> | string | null
   guildId?: Prisma.StringWithAggregatesFilter<"Invitation"> | string
   status?: Prisma.EnumInvitationStatusWithAggregatesFilter<"Invitation"> | $Enums.InvitationStatus
   invitedRole?: Prisma.IntWithAggregatesFilter<"Invitation"> | number
@@ -313,6 +325,7 @@ export type InvitationCreateInput = {
   id?: string
   senderId: string
   receiverId: string
+  notificationId?: string | null
   guildId: string
   status?: $Enums.InvitationStatus
   invitedRole: number
@@ -325,6 +338,7 @@ export type InvitationUncheckedCreateInput = {
   id?: string
   senderId: string
   receiverId: string
+  notificationId?: string | null
   guildId: string
   status?: $Enums.InvitationStatus
   invitedRole: number
@@ -337,6 +351,7 @@ export type InvitationUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   senderId?: Prisma.StringFieldUpdateOperationsInput | string
   receiverId?: Prisma.StringFieldUpdateOperationsInput | string
+  notificationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   guildId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvitationStatusFieldUpdateOperationsInput | $Enums.InvitationStatus
   invitedRole?: Prisma.IntFieldUpdateOperationsInput | number
@@ -349,6 +364,7 @@ export type InvitationUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   senderId?: Prisma.StringFieldUpdateOperationsInput | string
   receiverId?: Prisma.StringFieldUpdateOperationsInput | string
+  notificationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   guildId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvitationStatusFieldUpdateOperationsInput | $Enums.InvitationStatus
   invitedRole?: Prisma.IntFieldUpdateOperationsInput | number
@@ -361,6 +377,7 @@ export type InvitationCreateManyInput = {
   id?: string
   senderId: string
   receiverId: string
+  notificationId?: string | null
   guildId: string
   status?: $Enums.InvitationStatus
   invitedRole: number
@@ -373,6 +390,7 @@ export type InvitationUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   senderId?: Prisma.StringFieldUpdateOperationsInput | string
   receiverId?: Prisma.StringFieldUpdateOperationsInput | string
+  notificationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   guildId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvitationStatusFieldUpdateOperationsInput | $Enums.InvitationStatus
   invitedRole?: Prisma.IntFieldUpdateOperationsInput | number
@@ -385,6 +403,7 @@ export type InvitationUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   senderId?: Prisma.StringFieldUpdateOperationsInput | string
   receiverId?: Prisma.StringFieldUpdateOperationsInput | string
+  notificationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   guildId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumInvitationStatusFieldUpdateOperationsInput | $Enums.InvitationStatus
   invitedRole?: Prisma.IntFieldUpdateOperationsInput | number
@@ -397,6 +416,7 @@ export type InvitationCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   senderId?: Prisma.SortOrder
   receiverId?: Prisma.SortOrder
+  notificationId?: Prisma.SortOrder
   guildId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   invitedRole?: Prisma.SortOrder
@@ -413,6 +433,7 @@ export type InvitationMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   senderId?: Prisma.SortOrder
   receiverId?: Prisma.SortOrder
+  notificationId?: Prisma.SortOrder
   guildId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   invitedRole?: Prisma.SortOrder
@@ -425,6 +446,7 @@ export type InvitationMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   senderId?: Prisma.SortOrder
   receiverId?: Prisma.SortOrder
+  notificationId?: Prisma.SortOrder
   guildId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   invitedRole?: Prisma.SortOrder
@@ -439,6 +461,10 @@ export type InvitationSumOrderByAggregateInput = {
 
 export type StringFieldUpdateOperationsInput = {
   set?: string
+}
+
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
 }
 
 export type EnumInvitationStatusFieldUpdateOperationsInput = {
@@ -463,6 +489,7 @@ export type InvitationSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   id?: boolean
   senderId?: boolean
   receiverId?: boolean
+  notificationId?: boolean
   guildId?: boolean
   status?: boolean
   invitedRole?: boolean
@@ -475,6 +502,7 @@ export type InvitationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   id?: boolean
   senderId?: boolean
   receiverId?: boolean
+  notificationId?: boolean
   guildId?: boolean
   status?: boolean
   invitedRole?: boolean
@@ -487,6 +515,7 @@ export type InvitationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   id?: boolean
   senderId?: boolean
   receiverId?: boolean
+  notificationId?: boolean
   guildId?: boolean
   status?: boolean
   invitedRole?: boolean
@@ -499,6 +528,7 @@ export type InvitationSelectScalar = {
   id?: boolean
   senderId?: boolean
   receiverId?: boolean
+  notificationId?: boolean
   guildId?: boolean
   status?: boolean
   invitedRole?: boolean
@@ -507,7 +537,7 @@ export type InvitationSelectScalar = {
   updatedAt?: boolean
 }
 
-export type InvitationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "senderId" | "receiverId" | "guildId" | "status" | "invitedRole" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["invitation"]>
+export type InvitationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "senderId" | "receiverId" | "notificationId" | "guildId" | "status" | "invitedRole" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["invitation"]>
 
 export type $InvitationPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Invitation"
@@ -516,6 +546,7 @@ export type $InvitationPayload<ExtArgs extends runtime.Types.Extensions.Internal
     id: string
     senderId: string
     receiverId: string
+    notificationId: string | null
     guildId: string
     status: $Enums.InvitationStatus
     invitedRole: number
@@ -948,6 +979,7 @@ export interface InvitationFieldRefs {
   readonly id: Prisma.FieldRef<"Invitation", 'String'>
   readonly senderId: Prisma.FieldRef<"Invitation", 'String'>
   readonly receiverId: Prisma.FieldRef<"Invitation", 'String'>
+  readonly notificationId: Prisma.FieldRef<"Invitation", 'String'>
   readonly guildId: Prisma.FieldRef<"Invitation", 'String'>
   readonly status: Prisma.FieldRef<"Invitation", 'InvitationStatus'>
   readonly invitedRole: Prisma.FieldRef<"Invitation", 'Int'>

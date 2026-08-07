@@ -107,15 +107,27 @@ export class InvitationService {
       )[0];
 
       try {
-        await this.notificationClient.call('sendNotification', {
-          channel: `personal:#${request.receiverId}:notifications`,
-          receiverId: request.receiverId!,
-          senderId: request.senderId,
-          notificationType: NotificationType.NEW_INVITE_TO_GUILD,
-          notificationPayload: JSON.stringify({
-            message: `Пользователь ${invitationResponse.senderInfo?.username} приглашает вас вступить на сервер - ${guild.name}`,
-            payload: invitationResponse,
-          }),
+        const notification = await this.notificationClient.call(
+          'sendNotification',
+          {
+            channel: `personal:#${request.receiverId}:notifications`,
+            receiverId: request.receiverId!,
+            senderId: request.senderId,
+            notificationType: NotificationType.NEW_INVITE_TO_GUILD,
+            notificationPayload: JSON.stringify({
+              message: `Пользователь ${invitationResponse.senderInfo?.username} приглашает вас вступить на сервер - ${guild.name}`,
+              payload: invitationResponse,
+            }),
+          },
+        );
+
+        await this.prisma.invitation.update({
+          where: {
+            id: invitation.id,
+          },
+          data: {
+            notificationId: notification.notification?.id,
+          },
         });
       } catch (notifyError) {
         await this.prisma.invitation.delete({
@@ -169,7 +181,7 @@ export class InvitationService {
     }
 
     try {
-      await this.prisma.invitation.update({
+      const updatedInvitation = await this.prisma.invitation.update({
         where: {
           id: invitation.id,
         },
@@ -178,19 +190,42 @@ export class InvitationService {
         },
       });
 
-      if (newStatus === InvitationStatus.ACCEPTED) {
-        try {
+      try {
+        const mappedInvitation = (
+          await this._mapInvitationsToResponse([updatedInvitation])
+        )[0];
+
+        if (newStatus === InvitationStatus.ACCEPTED) {
           await this.guildClient.call('joinUserToGuild', {
             guildId: invitation.guildId,
             userId: invitation.receiverId,
           });
-        } catch (joinError) {
-          await this.prisma.invitation.update({
-            where: { id: invitation.id },
-            data: { status: InvitationStatus.PENDING },
-          });
-          throw joinError;
         }
+
+        if (invitation.notificationId) {
+          const { guild } = await this.guildClient.call('getGuildById', {
+            guildId: invitation.guildId,
+          });
+
+          await this.notificationClient.call('updateNotificationPayload', {
+            notificationId: invitation.notificationId,
+            notificationPayload: JSON.stringify({
+              message:
+                newStatus === InvitationStatus.ACCEPTED
+                  ? `Вы приняли приглашение от пользователя ${mappedInvitation.senderInfo?.username} на сервер - ${guild?.name}`
+                  : newStatus === InvitationStatus.DECLINED
+                    ? `Вы отклонили приглашение пользователя ${mappedInvitation.senderInfo?.username} на сервер - ${guild?.name}`
+                    : `Вы приняли приглашение от пользователя ${mappedInvitation.senderInfo?.username} истекло`,
+              payload: mappedInvitation,
+            }),
+          });
+        }
+      } catch (joinError) {
+        await this.prisma.invitation.update({
+          where: { id: invitation.id },
+          data: { status: InvitationStatus.PENDING },
+        });
+        throw joinError;
       }
     } catch (error) {
       console.log(error);
