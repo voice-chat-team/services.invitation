@@ -4,17 +4,17 @@ import type {
   GetInvitationsRequest,
   CreateInvitationRequest,
   Invitation,
-} from '@voice-chat/contracts/gen/invitation';
+} from '@voice-chat/contracts/gen/ts/invitation';
 import { GRPC_INVITATION_STATUS } from '../../shared/mapper/invitation-status.map';
 import { InvitationStatus } from 'prisma/generated/enums';
 import { GuildClientGrpc } from '../guild/guild.grpc';
 import { RpcException } from '@nestjs/microservices';
-import { RpcStatus } from '@voice-chat/common';
+import { assertGuildPermission, RpcStatus } from '@voice-chat/common';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { UserClientGrpc } from '../user/user.grpc';
 import { InvitationModel } from 'prisma/generated/models';
 import { NotificationClientGrpc } from '../notification/notification.grpc';
-import { NotificationType } from '@voice-chat/contracts';
+import { NotificationType, Permission } from '@voice-chat/contracts';
 
 @Injectable()
 export class InvitationService {
@@ -71,12 +71,11 @@ export class InvitationService {
       guildId: request.guildId,
     });
 
-    if (!senderMember.memberInfo?.isGuildOwner) {
-      throw new RpcException({
-        code: RpcStatus.NOT_FOUND,
-        details: 'Отправлять приглашение может только владелец сервера',
-      });
-    }
+    assertGuildPermission(
+      senderMember.memberInfo,
+      Permission.INVITE_MEMBERS,
+      'У вас нет права приглашать участников на этот сервер',
+    );
 
     const { guild } = await this.guildClient.call('getGuildById', {
       guildId: request.guildId,
@@ -215,7 +214,7 @@ export class InvitationService {
                   ? `Вы приняли приглашение от пользователя ${mappedInvitation.senderInfo?.username} на сервер - ${guild?.name}`
                   : newStatus === InvitationStatus.DECLINED
                     ? `Вы отклонили приглашение пользователя ${mappedInvitation.senderInfo?.username} на сервер - ${guild?.name}`
-                    : `Вы приняли приглашение от пользователя ${mappedInvitation.senderInfo?.username} истекло`,
+                    : `Принятие приглашения от пользователя ${mappedInvitation.senderInfo?.username} истекло`,
               payload: mappedInvitation,
             }),
           });

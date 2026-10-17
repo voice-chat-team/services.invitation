@@ -10,7 +10,7 @@ import type {
   GetInvitationsResponse,
   RevokeInvitationRequest,
   RevokeInvitationResponse,
-} from '@voice-chat/contracts/gen/invitation';
+} from '@voice-chat/contracts/gen/ts/invitation';
 import { InvitationStatus } from 'prisma/generated/enums';
 @Controller()
 export class InvitationController {
