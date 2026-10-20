@@ -28,17 +28,21 @@ export class InvitationService {
   async createInvitation(
     request: CreateInvitationRequest,
   ): Promise<Invitation> {
-    if (request.receiverId === request.senderId) {
+    const { receiverUsername, ...invitationData } = request;
+
+    if (!request.receiverId && !receiverUsername) {
       throw new RpcException({
         code: RpcStatus.INVALID_ARGUMENT,
-        details: 'Нельзя пригласить самого себя',
+        details: 'Не указан получатель приглашения',
       });
     }
 
-    const reciverUserInfo = await this.userClient.call('getUser', {
-      userId: request.receiverId,
-      username: request.receiverUsername,
-    });
+    const reciverUserInfo = await this.userClient.call(
+      'getUser',
+      request.receiverId
+        ? { userId: request.receiverId }
+        : { username: receiverUsername },
+    );
 
     if (!reciverUserInfo.user) {
       throw new RpcException({
@@ -47,10 +51,19 @@ export class InvitationService {
       });
     }
 
+    const receiverId = reciverUserInfo.user.id;
+
+    if (receiverId === request.senderId) {
+      throw new RpcException({
+        code: RpcStatus.INVALID_ARGUMENT,
+        details: 'Нельзя пригласить самого себя',
+      });
+    }
+
     try {
       const receiverMember = await this.guildClient.call('getMemberById', {
         guildId: request.guildId,
-        userId: reciverUserInfo.user?.id,
+        userId: receiverId,
       });
       if (receiverMember.memberInfo) {
         throw new RpcException({
@@ -91,8 +104,8 @@ export class InvitationService {
     try {
       const invitation = await this.prisma.invitation.create({
         data: {
-          ...request,
-          receiverId: reciverUserInfo.user?.id,
+          ...invitationData,
+          receiverId,
           senderId: request.senderId,
           guildId: request.guildId,
           status: InvitationStatus.PENDING,
@@ -109,8 +122,8 @@ export class InvitationService {
         const notification = await this.notificationClient.call(
           'sendNotification',
           {
-            channel: `personal:#${request.receiverId}:notifications`,
-            receiverId: request.receiverId!,
+            channel: `personal:#${receiverId}:notifications`,
+            receiverId,
             senderId: request.senderId,
             notificationType: NotificationType.NEW_INVITE_TO_GUILD,
             notificationPayload: JSON.stringify({
