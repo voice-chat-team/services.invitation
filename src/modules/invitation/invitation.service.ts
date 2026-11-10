@@ -5,6 +5,7 @@ import type {
   CreateInvitationRequest,
   Invitation,
 } from '@voice-chat/contracts/gen/ts/invitation';
+import type { GetMemberByIdResponse } from '@voice-chat/contracts/gen/ts/guilds';
 import { GRPC_INVITATION_STATUS } from '../../shared/mapper/invitation-status.map';
 import { InvitationStatus } from 'prisma/generated/enums';
 import { Prisma } from 'prisma/generated/client';
@@ -13,9 +14,16 @@ import { RpcException } from '@nestjs/microservices';
 import { assertGuildPermission, RpcStatus } from '@voice-chat/common';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { UserClientGrpc } from '../user/user.grpc';
-import { InvitationModel } from 'prisma/generated/models';
+import type { InvitationModel } from 'prisma/generated/models';
 import { NotificationClientGrpc } from '../notification/notification.grpc';
 import { NotificationType, Permission } from '@voice-chat/contracts';
+import { getRpcError, toRpcException } from './invitation-rpc-error';
+
+type InvitationResponseStatus =
+  typeof InvitationStatus.ACCEPTED | typeof InvitationStatus.DECLINED;
+
+const EXPIRED_INVITATION_MESSAGE =
+  'Срок приглашения истёк. Запросите новое приглашение.';
 
 @Injectable()
 export class InvitationService {
@@ -29,82 +37,12 @@ export class InvitationService {
   async createInvitation(
     request: CreateInvitationRequest,
   ): Promise<Invitation> {
-    const { receiverUsername, ...invitationData } = request;
-
-    if (!request.receiverId && !receiverUsername) {
-      throw new RpcException({
-        code: RpcStatus.INVALID_ARGUMENT,
-        details: 'Не указан получатель приглашения',
-      });
-    }
-
-    const reciverUserInfo = await this.userClient.call(
-      'getUser',
-      request.receiverId
-        ? { userId: request.receiverId }
-        : { username: receiverUsername },
-    );
-
-    if (!reciverUserInfo.user) {
-      throw new RpcException({
-        code: RpcStatus.NOT_FOUND,
-        details: 'Пользователь не найден',
-      });
-    }
-
-    const receiverId = reciverUserInfo.user.id;
-
-    if (receiverId === request.senderId) {
-      throw new RpcException({
-        code: RpcStatus.INVALID_ARGUMENT,
-        details: 'Нельзя пригласить самого себя',
-      });
-    }
-
-    try {
-      const receiverMember = await this.guildClient.call('getMemberById', {
-        guildId: request.guildId,
-        userId: receiverId,
-      });
-      if (receiverMember.memberInfo) {
-        throw new RpcException({
-          code: RpcStatus.NOT_FOUND,
-          details: 'Пользователь уже является участником сервера',
-        });
-      }
-    } catch (error) {
-      console.error(error);
-      if ('error' in error) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-        throw new RpcException(error.error);
-      }
-    }
-
-    const senderMember = await this.guildClient.call('getMemberById', {
-      userId: request.senderId,
-      guildId: request.guildId,
-    });
-
-    assertGuildPermission(
-      senderMember.memberInfo,
-      Permission.INVITE_MEMBERS,
-      'У вас нет права приглашать участников на этот сервер',
-    );
-
-    const { guild } = await this.guildClient.call('getGuildById', {
-      guildId: request.guildId,
-    });
-
-    if (!guild) {
-      throw new RpcException({
-        code: RpcStatus.NOT_FOUND,
-        details: 'Такой сервер не существует',
-      });
-    }
+    const receiverId = await this._resolveReceiverId(request);
+    await this._assertReceiverNotMember(request.guildId, receiverId);
+    const guild = await this._getGuildForInvitation(request);
 
     try {
       const invitation = await this._createPendingInvitation({
-        ...invitationData,
         receiverId,
         senderId: request.senderId,
         guildId: request.guildId,
@@ -114,44 +52,13 @@ export class InvitationService {
       });
 
       try {
-        const [invitationResponse] = await this._mapInvitationsToResponse([
-          invitation,
-        ]);
-        const notification = await this.notificationClient.call(
-          'sendNotification',
-          {
-            channel: `personal:#${receiverId}:notifications`,
-            receiverId,
-            senderId: request.senderId,
-            notificationType: NotificationType.NEW_INVITE_TO_GUILD,
-            notificationPayload: JSON.stringify({
-              message: `Пользователь ${invitationResponse.senderInfo?.username} приглашает вас вступить на сервер - ${guild.name}`,
-              payload: invitationResponse,
-            }),
-          },
-        );
-
-        await this.prisma.invitation.update({
-          where: {
-            id: invitation.id,
-          },
-          data: {
-            notificationId: notification.notification?.id,
-          },
-        });
-
-        return invitationResponse;
-      } catch (notifyError) {
-        await this.prisma.invitation.delete({
-          where: { id: invitation.id },
-        });
-        throw notifyError;
+        return await this._sendInvitationNotification(invitation, guild.name);
+      } catch (error: unknown) {
+        await this.prisma.invitation.delete({ where: { id: invitation.id } });
+        throw error;
       }
-    } catch (error) {
-      if (error instanceof RpcException) throw error;
-
-      console.error(error);
-      throw new RpcException({
+    } catch (error: unknown) {
+      throw toRpcException(error, {
         code: RpcStatus.INVALID_ARGUMENT,
         details: 'Не удалось отправить приглашение',
       });
@@ -171,12 +78,12 @@ export class InvitationService {
       },
     });
 
-    return this._mapInvitationsToResponse(invitations);
+    return this._enrichInvitationsWithUsers(invitations);
   }
 
-  async updateInvitation(
+  async respondToInvitation(
     request: AcceptInvitationRequest,
-    newStatus: InvitationStatus,
+    newStatus: InvitationResponseStatus,
   ) {
     try {
       const result = await this.prisma.$transaction(
@@ -190,11 +97,7 @@ export class InvitationService {
             });
           }
 
-          if (
-            invitation.status === InvitationStatus.EXPIRED ||
-            (invitation.status === InvitationStatus.PENDING &&
-              invitation.expiresAt.getTime() <= Date.now())
-          ) {
+          if (this._isExpired(invitation)) {
             await this._expireInvitation(tx, invitation);
             return { expired: true, invitation };
           }
@@ -229,31 +132,13 @@ export class InvitationService {
       if (result.expired) {
         throw new RpcException({
           code: RpcStatus.FAILED_PRECONDITION,
-          details: 'Срок приглашения истёк. Запросите новое приглашение.',
+          details: EXPIRED_INVITATION_MESSAGE,
         });
       }
 
       await this._updateInvitationNotification(result.invitation);
-    } catch (error) {
-      if (error instanceof RpcException) throw error;
-
-      // Сохраняем gRPC-ошибки, например запрет вступления для заблокированного.
-      if (
-        error &&
-        typeof error === 'object' &&
-        'code' in error &&
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        typeof error.code === 'number' &&
-        'details' in error &&
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        typeof error.details === 'string'
-      ) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-        throw new RpcException({ code: error.code, details: error.details });
-      }
-
-      console.error(error);
-      throw new RpcException({
+    } catch (error: unknown) {
+      throw toRpcException(error, {
         code: RpcStatus.INTERNAL,
         details: 'Ошибка при обновлении статуса приглашения',
       });
@@ -289,6 +174,132 @@ export class InvitationService {
     );
   }
 
+  private async _resolveReceiverId(request: CreateInvitationRequest) {
+    const { receiverId, receiverUsername, senderId } = request;
+    if (!receiverId && !receiverUsername) {
+      throw new RpcException({
+        code: RpcStatus.INVALID_ARGUMENT,
+        details: 'Не указан получатель приглашения',
+      });
+    }
+
+    const { user } = await this.userClient.call(
+      'getUser',
+      receiverId ? { userId: receiverId } : { username: receiverUsername },
+    );
+    if (!user) {
+      throw new RpcException({
+        code: RpcStatus.NOT_FOUND,
+        details: 'Пользователь не найден',
+      });
+    }
+    if (user.id === senderId) {
+      throw new RpcException({
+        code: RpcStatus.INVALID_ARGUMENT,
+        details: 'Нельзя пригласить самого себя',
+      });
+    }
+    return user.id;
+  }
+
+  private async _assertReceiverNotMember(guildId: string, receiverId: string) {
+    let member: GetMemberByIdResponse;
+    try {
+      member = await this.guildClient.call('getMemberById', {
+        guildId,
+        userId: receiverId,
+      });
+    } catch (error: unknown) {
+      if (getRpcError(error)?.code === RpcStatus.NOT_FOUND) return;
+      throw toRpcException(error, {
+        code: RpcStatus.INTERNAL,
+        details: 'Не удалось проверить участие пользователя в сервере',
+      });
+    }
+
+    if (member.memberInfo) {
+      throw new RpcException({
+        code: RpcStatus.NOT_FOUND,
+        details: 'Пользователь уже является участником сервера',
+      });
+    }
+  }
+
+  private async _getGuildForInvitation(request: CreateInvitationRequest) {
+    const senderMember = await this.guildClient.call('getMemberById', {
+      userId: request.senderId,
+      guildId: request.guildId,
+    });
+    assertGuildPermission(
+      senderMember.memberInfo,
+      Permission.INVITE_MEMBERS,
+      'У вас нет права приглашать участников на этот сервер',
+    );
+
+    const { guild } = await this.guildClient.call('getGuildById', {
+      guildId: request.guildId,
+    });
+    if (!guild) {
+      throw new RpcException({
+        code: RpcStatus.NOT_FOUND,
+        details: 'Такой сервер не существует',
+      });
+    }
+    return guild;
+  }
+
+  private async _sendInvitationNotification(
+    invitation: InvitationModel,
+    guildName: string,
+  ): Promise<Invitation> {
+    const [payload] = await this._enrichInvitationsWithUsers([invitation]);
+    const { notification } = await this.notificationClient.call(
+      'sendNotification',
+      {
+        channel: `personal:#${invitation.receiverId}:notifications`,
+        receiverId: invitation.receiverId,
+        senderId: invitation.senderId,
+        notificationType: NotificationType.NEW_INVITE_TO_GUILD,
+        notificationPayload: JSON.stringify({
+          message: `Пользователь ${payload.senderInfo?.username} приглашает вас вступить на сервер - ${guildName}`,
+          payload,
+        }),
+      },
+    );
+    await this.prisma.invitation.update({
+      where: { id: invitation.id },
+      data: { notificationId: notification?.id },
+    });
+    return payload;
+  }
+
+  private _isExpired(invitation: InvitationModel): boolean {
+    return (
+      invitation.status === InvitationStatus.EXPIRED ||
+      (invitation.status === InvitationStatus.PENDING &&
+        invitation.expiresAt.getTime() <= Date.now())
+    );
+  }
+
+  private _buildExpiredNotifications(invitations: readonly InvitationModel[]) {
+    return invitations.flatMap((invitation) => {
+      if (!invitation.notificationId) return [];
+
+      return [
+        {
+          notificationId: invitation.notificationId,
+          notificationPayload: JSON.stringify({
+            message: EXPIRED_INVITATION_MESSAGE,
+            payload: this._mapInvitation({
+              ...invitation,
+              status: InvitationStatus.EXPIRED,
+            }),
+          }),
+        },
+      ];
+    });
+  }
+
   private async _findInvitationForUpdate(
     tx: Prisma.TransactionClient,
     request: AcceptInvitationRequest,
@@ -317,22 +328,7 @@ export class InvitationService {
   ) {
     if (invitations.length === 0) return;
 
-    const notifications = invitations.flatMap((invitation) =>
-      invitation.notificationId
-        ? [
-            {
-              notificationId: invitation.notificationId,
-              notificationPayload: JSON.stringify({
-                message: 'Срок приглашения истёк. Запросите новое приглашение.',
-                payload: this._mapInvitation({
-                  ...invitation,
-                  status: InvitationStatus.EXPIRED,
-                }),
-              }),
-            },
-          ]
-        : [],
-    );
+    const notifications = this._buildExpiredNotifications(invitations);
 
     if (notifications.length > 0) {
       const { status } = await this.notificationClient.call(
@@ -362,22 +358,14 @@ export class InvitationService {
   private async _updateInvitationNotification(invitation: InvitationModel) {
     if (!invitation.notificationId) return;
 
-    let payload: Invitation;
-    let message: string;
-
-    if (invitation.status === InvitationStatus.EXPIRED) {
-      payload = this._mapInvitation(invitation);
-      message = 'Срок приглашения истёк. Запросите новое приглашение.';
-    } else {
-      [payload] = await this._mapInvitationsToResponse([invitation]);
-      const { guild } = await this.guildClient.call('getGuildById', {
-        guildId: invitation.guildId,
-      });
-      message =
-        invitation.status === InvitationStatus.ACCEPTED
-          ? `Вы приняли приглашение от пользователя ${payload.senderInfo?.username} на сервер - ${guild?.name}`
-          : `Вы отклонили приглашение пользователя ${payload.senderInfo?.username} на сервер - ${guild?.name}`;
-    }
+    const [payload] = await this._enrichInvitationsWithUsers([invitation]);
+    const { guild } = await this.guildClient.call('getGuildById', {
+      guildId: invitation.guildId,
+    });
+    const message =
+      invitation.status === InvitationStatus.ACCEPTED
+        ? `Вы приняли приглашение от пользователя ${payload.senderInfo?.username} на сервер - ${guild?.name}`
+        : `Вы отклонили приглашение пользователя ${payload.senderInfo?.username} на сервер - ${guild?.name}`;
 
     await this.notificationClient.call('updateNotificationPayload', {
       notificationId: invitation.notificationId,
@@ -445,25 +433,23 @@ export class InvitationService {
     }
   }
 
-  private async _mapInvitationsToResponse(
-    invitations: InvitationModel[],
+  private async _enrichInvitationsWithUsers(
+    invitations: readonly InvitationModel[],
   ): Promise<Invitation[]> {
-    const receiverUsersIds = invitations.map(
-      (invitation) => invitation.receiverId,
+    if (invitations.length === 0) return [];
+
+    const userIds = new Set(
+      invitations.flatMap(({ receiverId, senderId }) => [receiverId, senderId]),
     );
-    const senderUsersIds = invitations.map((invitation) => invitation.senderId);
-    const usersInfo = await this.userClient.call('getRangeUsersById', {
-      usersId: [...receiverUsersIds, ...senderUsersIds],
+    const { users } = await this.userClient.call('getRangeUsersById', {
+      usersId: [...userIds],
     });
+    const usersById = new Map(users.map((user) => [user.id, user]));
 
     return invitations.map((invitation) => ({
       ...this._mapInvitation(invitation),
-      receiverInfo: usersInfo.users.find(
-        (user) => user.id === invitation.receiverId,
-      ),
-      senderInfo: usersInfo.users.find(
-        (user) => user.id === invitation.senderId,
-      ),
+      receiverInfo: usersById.get(invitation.receiverId),
+      senderInfo: usersById.get(invitation.senderId),
     }));
   }
 }

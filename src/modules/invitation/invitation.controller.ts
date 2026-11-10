@@ -36,7 +36,7 @@ export class InvitationController {
   async acceptInvitation(
     request: AcceptInvitationRequest,
   ): Promise<AcceptInvitationResponse> {
-    await this.invitationService.updateInvitation(
+    await this.invitationService.respondToInvitation(
       request,
       InvitationStatus.ACCEPTED,
     );
@@ -47,7 +47,7 @@ export class InvitationController {
   async revokeInvitation(
     request: RevokeInvitationRequest,
   ): Promise<RevokeInvitationResponse> {
-    await this.invitationService.updateInvitation(
+    await this.invitationService.respondToInvitation(
       request,
       InvitationStatus.DECLINED,
     );
