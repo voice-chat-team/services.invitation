@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { InvitationModule } from './modules/invitation/invitation.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
@@ -8,6 +9,7 @@ import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [`.env.${process.env.NODE_ENV}.local`, '.env'],
